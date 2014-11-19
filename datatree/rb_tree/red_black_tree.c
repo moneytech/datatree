@@ -272,8 +272,8 @@ rb_red_blk_node * RBTreeInsert(rb_red_blk_tree* tree, void* key, void* info) {
   return(newNode);
 
 #ifdef DEBUG_ASSERT
-  Assert(!tree->nil->red,"nil not red in RBTreeInsert");
-  Assert(!tree->root->red,"root not red in RBTreeInsert");
+  /*Assert(!tree->nil->red,"nil not red in RBTreeInsert");
+  Assert(!tree->root->red,"root not red in RBTreeInsert");*/
 #endif
 }
 

@@ -147,11 +147,11 @@ void Value::unsafeMove(dt_value_t val) {
 	dt_value_mem_move(mRep, val);
 }
 
-dt_datatree_t Value::getDatatree(void) {
+dt_datatree_t Value::getDatatree(void) const {
 	return mDatatree;
 }
 
-dt_value_t Value::getValue(void) {
+dt_value_t Value::getValue(void) const {
 	return mRep;
 }
 
@@ -206,7 +206,7 @@ ValueRef::ValueRef(dt_datatree_t d, dt_value_t v) : dt(d), val(v) {
 ValueRef::~ValueRef() {
 }
 
-dt_value_t ValueRef::getValue(void) {
+dt_value_t ValueRef::getValue(void) const {
     return val;
 }
 
@@ -249,6 +249,13 @@ bool ValueRef::isNumber(void) const {
     dt_type_t t = dt_value_type(val);
 
     return t >= DT_LONG || t <= DT_DOUBLE;
+}
+
+Value ValueRef::clone(void) const {
+    Value result;
+    result.cloneFrom(DT_DUMMY_DATATREE, getValue());
+
+    return result;
 }
 
 Obj::Obj() : dt(NULL), raw(NULL) {

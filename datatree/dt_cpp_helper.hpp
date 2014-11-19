@@ -49,13 +49,18 @@ public:
 	void unsafeSwap(dt_value_t val);
 	void unsafeMove(dt_value_t val);
 
-	dt_datatree_t getDatatree(void);
-	dt_value_t getValue(void);
+	dt_datatree_t getDatatree(void) const;
+	dt_value_t getValue(void) const;
 
 	operator dt_value_t(void);
 
 	std::string toString(dt_bool_t compact = DT_FALSE) const;
 	void toString(std::string &buf, dt_bool_t compact = DT_FALSE) const;
+
+    template<typename T>
+    bool is(void) const {
+        DT_ASSERT(0 && "Impossible");
+    }
 
 	template<typename T>
 	T as(void) const {
@@ -81,7 +86,7 @@ public:
     ValueRef(dt_datatree_t d, dt_value_t v);
     ~ValueRef();
 
-    dt_value_t getValue(void);
+    dt_value_t getValue(void) const;
 
     void setValue(dt_value_t v);
     void setValue(const char* v);
@@ -93,6 +98,8 @@ public:
     bool isInteger(void) const;
     bool isFloat(void) const;
     bool isNumber(void) const;
+
+    Value clone(void) const;
 
     template<typename T>
     bool is(void) const {
@@ -169,6 +176,20 @@ private:
     
 };
 
+template<> inline bool Value::is<dt_bool_t>(void) const { return dt_value_type(mRep) == DT_BOOL; }
+template<> inline bool Value::is<bool>(void) const { return dt_value_type(mRep) == DT_BOOL; }
+template<> inline bool Value::is<int>(void) const { return dt_value_type(mRep) == DT_LONG; }
+template<> inline bool Value::is<long>(void) const { return dt_value_type(mRep) == DT_LONG; }
+template<> inline bool Value::is<float>(void) const { return dt_value_type(mRep) == DT_DOUBLE; }
+template<> inline bool Value::is<double>(void) const { return dt_value_type(mRep) == DT_DOUBLE; }
+template<> inline bool Value::is<char*>(void) const { return dt_value_type(mRep) == DT_STRING; }
+template<> inline bool Value::is<const char*>(void) const { return dt_value_type(mRep) == DT_STRING; }
+template<> inline bool Value::is<std::string>(void) const { return dt_value_type(mRep) == DT_STRING; }
+template<> inline bool Value::is<dt_object_t>(void) const { return dt_value_type(mRep) == DT_OBJECT; }
+template<> inline bool Value::is<dt_array_t>(void) const { return dt_value_type(mRep) == DT_ARRAY; }
+template<> inline bool Value::is<Obj>(void) const { return dt_value_type(mRep) == DT_OBJECT; }
+template<> inline bool Value::is<Arr>(void) const { return dt_value_type(mRep) == DT_ARRAY; }
+
 template<> inline dt_bool_t Value::as(void) const { dt_bool_t ret = DT_FALSE; dt_value_data_as(&ret, mRep, DT_BOOL); return ret; }
 template<> inline bool Value::as(void) const { dt_bool_t ret = DT_FALSE; dt_value_data_as(&ret, mRep, DT_BOOL); return !!ret; }
 template<> inline int Value::as(void) const { long ret = 0; dt_value_data_as(&ret, mRep, DT_LONG); return (int)ret; }
@@ -178,7 +199,6 @@ template<> inline double Value::as(void) const { double ret = 0; dt_value_data_a
 template<> inline std::string Value::as(void) const { char* ret = NULL; dt_value_data_as(&ret, mRep, DT_STRING); return ret; }
 template<> inline dt_object_t Value::as(void) const { dt_object_t ret = NULL; dt_value_data_as(&ret, mRep, DT_OBJECT); return ret; }
 template<> inline dt_array_t Value::as(void) const { dt_array_t ret = NULL; dt_value_data_as(&ret, mRep, DT_ARRAY); return ret; }
-
 template<> inline Obj Value::as(void) const { return Obj(DT_DUMMY_DATATREE, *this); }
 template<> inline Arr Value::as(void) const { return Arr(DT_DUMMY_DATATREE, *this); }
 

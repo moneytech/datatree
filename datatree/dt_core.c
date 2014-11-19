@@ -10,6 +10,11 @@ extern "C" {
 #	pragma warning(disable : 4116)
 #endif /* _MSC_VER */
 
+#ifdef __APPLE__
+#   pragma clang diagnostic push
+#   pragma clang diagnostic ignored "-Wunused-function"
+#endif /* __APPLE__ */
+
 /*
 ** {========================================================
 ** Macros
@@ -17,8 +22,8 @@ extern "C" {
 
 #ifndef DTVER
 #	define DTVER_MAJOR	0
-#	define DTVER_MINOR	1
-#	define DTVER_PATCH	39
+#	define DTVER_MINOR	9
+#	define DTVER_PATCH	0
 #	define DTVER ((DTVER_MAJOR * 0x01000000) + (DTVER_MINOR * 0x00010000) + (DTVER_PATCH))
 #endif /* DTVER */
 #ifndef DTBVER
@@ -174,7 +179,7 @@ typedef struct _dt_array_t {
 	int readonly : 1;
 } _dt_array_t;
 
-typedef unsigned char _dt_value_raw_t[8];
+typedef unsigned char _dt_value_raw_t[sizeof(intptr_t) * 2];
 
 typedef struct _dt_value_t {
 	dt_type_t type;
@@ -270,7 +275,7 @@ static char* _dt_strcat(_dt_string_t* d, const char* src);
 static char* _dt_strecat(_dt_string_t* d, const char* src);
 
 static void _dt_fensure(const char* file);
-static int _dt_flen(FILE* fp);
+static long _dt_flen(FILE* fp);
 static char* _dt_freadall(const char* file);
 static void _dt_fwriteall(const char* file, void* buf, size_t size);
 
@@ -477,9 +482,9 @@ void _dt_fensure(const char* file) {
 	}
 }
 
-int _dt_flen(FILE* fp) {
-	int result = 0;
-	int curpos = 0;
+long _dt_flen(FILE* fp) {
+	long result = 0;
+	long curpos = 0;
 
 	DT_ASSERT(fp);
 	curpos = ftell(fp);
@@ -496,7 +501,7 @@ char* _dt_freadall(const char* file) {
 	DT_ASSERT(file);
 	fp = fopen(file, "rb");
 	if(fp != NULL) {
-		int l = _dt_flen(fp);
+		long l = _dt_flen(fp);
 		result = (char*)dt_malloc(l + 4);
 		DT_ASSERT(result);
 		fread(result, 1, l, fp);
@@ -2668,6 +2673,10 @@ void dt_set_string_popper(dt_datatree_t d, dt_pop_string_func_t p) {
 }
 
 /* ========================================================} */
+
+#ifdef __APPLE__
+#   pragma clang diagnostic pop
+#endif /* __APPLE__ */
 
 #ifdef __cplusplus
 }

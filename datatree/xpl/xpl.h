@@ -20,6 +20,11 @@
 #  pragma warning(disable : 4706)
 #endif /* _MSC_VER */
 
+#ifdef __APPLE__
+#   pragma clang diagnostic push
+#   pragma clang diagnostic ignored "-Wunused-function"
+#endif /* __APPLE__ */
+
 #include <memory.h>
 #include <assert.h>
 #include <string.h>
@@ -39,7 +44,7 @@ extern "C" {
 #ifndef XPLVER
 #  define XPLVER_MAJOR  1
 #  define XPLVER_MINOR  0
-#  define XPLVER_PATCH  16
+#  define XPLVER_PATCH  17
 #  define XPLVER ((XPLVER_MAJOR << 24) | (XPLVER_MINOR << 16) | (XPLVER_PATCH))
 #endif /* !XPLVER */
 
@@ -894,5 +899,9 @@ XPLINTERNAL int _xpl_func_info_sch_cmp(const void* _k, const void* _i) {
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#ifdef __APPLE__
+#   pragma clang diagnostic pop
+#endif /* __APPLE__ */
 
 #endif /* !__XPL_H__ */
