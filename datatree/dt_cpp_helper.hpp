@@ -54,8 +54,8 @@ public:
 
 	operator dt_value_t(void);
 
-	std::string toString(dt_bool_t compact = DT_FALSE) const;
-	void toString(std::string &buf, dt_bool_t compact = DT_FALSE) const;
+	std::string toString(dt_bool_t compact = DT_FALSE, dt_bool_t json_mode = DT_FALSE) const;
+	void toString(std::string &buf, dt_bool_t compact = DT_FALSE, dt_bool_t json_mode = DT_FALSE) const;
 
     template<typename T>
     bool is(void) const {

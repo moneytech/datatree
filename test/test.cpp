@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 			// clone test
 			dt_create_value(d, &v0, _on_parse_error, NULL, DT_NULL);
 			dt_clone_value(d, dt_root_value(d), v0);
-			dt_format_value(d, v0, &fmt, DT_FALSE);
+			dt_format_value(d, v0, &fmt, DT_FALSE, DT_TRUE);
 			printf("cloned value:\n%s\n", fmt);
 			dt_free((void**)&fmt);
 			fmt = NULL;
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
 			dt_free(&bin);
 
 			// format test
-			dt_save_datatree_string(d, &fmt, DT_FALSE);
+			dt_save_datatree_string(d, &fmt, DT_FALSE, DT_TRUE);
 			printf("root value:\n%s\n", fmt);
 			dt_free((void**)&fmt);
 			fmt = NULL;

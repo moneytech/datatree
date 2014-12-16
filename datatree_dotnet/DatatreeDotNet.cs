@@ -41,7 +41,8 @@ namespace dt
             DT_KEY_DOES_NOT_EXIST,
             DT_INDEX_OUT_OF_RANGE,
             DT_TYPE_NOT_MATCHED,
-            DT_VALUE_IS_READONLY
+            DT_VALUE_IS_READONLY,
+            DT_JSON_INCOMPATIBLE
         }
 
         public enum dt_query_status_t
@@ -124,13 +125,13 @@ namespace dt
         public static extern dt_status_t dt_load_datatree_file(IntPtr d, [InAttribute()] [MarshalAsAttribute(UnmanagedType.LPStr)] string f);
 
         [DllImportAttribute(DLL, EntryPoint = "dt_save_datatree_file")]
-        public static extern void dt_save_datatree_file(IntPtr d, [InAttribute()] [MarshalAsAttribute(UnmanagedType.LPStr)] string f, dt_bool_t compact);
+        public static extern dt_status_t dt_save_datatree_file(IntPtr d, [InAttribute()] [MarshalAsAttribute(UnmanagedType.LPStr)] string f, dt_bool_t compact);
 
         [DllImportAttribute(DLL, EntryPoint = "dt_load_datatree_string")]
         public static extern dt_status_t dt_load_datatree_string(IntPtr d, [InAttribute()] [MarshalAsAttribute(UnmanagedType.LPStr)] string s);
 
         [DllImportAttribute(DLL, EntryPoint = "dt_save_datatree_string")]
-        public static extern void dt_save_datatree_string(IntPtr d, ref IntPtr s, dt_bool_t compact);
+        public static extern dt_status_t dt_save_datatree_string(IntPtr d, ref IntPtr s, dt_bool_t compact);
 
         [DllImportAttribute(DLL, EntryPoint = "dt_load_datatree_bin")]
         public static extern dt_status_t dt_load_datatree_bin(IntPtr d, IntPtr b);
@@ -176,7 +177,7 @@ namespace dt
         public static extern void dt_destroy_value(IntPtr d, IntPtr v);
 
         [DllImportAttribute(DLL, EntryPoint = "dt_format_value")]
-        public static extern void dt_format_value(IntPtr d, IntPtr v, ref IntPtr s, dt_bool_t compact);
+        public static extern dt_status_t dt_format_value(IntPtr d, IntPtr v, ref IntPtr s, dt_bool_t compact);
 
         [DllImportAttribute(DLL, EntryPoint = "dt_clone_value")]
         public static extern void dt_clone_value(IntPtr d, IntPtr v, IntPtr o);

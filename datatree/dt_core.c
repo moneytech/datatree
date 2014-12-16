@@ -23,7 +23,7 @@ extern "C" {
 #ifndef DTVER
 #	define DTVER_MAJOR	0
 #	define DTVER_MINOR	9
-#	define DTVER_PATCH	0
+#	define DTVER_PATCH	1
 #	define DTVER ((DTVER_MAJOR * 0x01000000) + (DTVER_MINOR * 0x00010000) + (DTVER_PATCH))
 #endif /* DTVER */
 #ifndef DTBVER
@@ -111,6 +111,14 @@ extern "C" {
 		*(s) += len; \
 	} while(0)
 #endif /* _DT_RESIZE_BIN */
+
+#ifndef _DT_FORMAT_JSON_QUOTE
+#	define _DT_FORMAT_JSON_QUOTE(c, b) do { if(c) _dt_strcat(b, "\""); } while(0)
+#endif /* _DT_FORMAT_JSON_QUOTE */
+
+#ifndef _DT_CHECK
+#	define _DT_CHECK(r) { dt_status_t hr = (r); if(hr != DT_OK) { return hr; } }
+#endif /* _DT_CHECK */
 
 #ifndef _DT_MAKE_READONLY
 #	define _DT_MAKE_READONLY(t, v, r) _DT_MAKE_READONLY_##t(v, r)
@@ -218,6 +226,7 @@ typedef struct _dt_datatree_detail_t {
 	dt_parse_error_handler_t error_handler;
 	size_t format_indentation;
 	dt_bool_t compact_mode;
+	dt_bool_t json_mode;
 	unsigned char* ser_buf;
 	_dt_bin_header_t bin_header;
 } _dt_datatree_detail_t;
@@ -239,7 +248,8 @@ static const char* const _DT_STATUS_MSG[] = {
 	"The given key does not exist",
 	"Index out of range",
 	"Type not matched",
-	"Can not write readonly value"
+	"Can not write readonly value",
+	"The data is JSON incompatible"
 };
 
 DT_STATIC_ASSERT(sizeof(dt_enum_compatible_t) == sizeof(dt_bool_t));
@@ -311,10 +321,10 @@ static void _dt_ctor__dt_object_t(_dt_object_t* p, ...);
 static void _dt_dtor__dt_object_t(_dt_object_t* p);
 
 static void _dt_indentation_format(_dt_datatree_detail_t* d, _dt_string_t* buf);
-static void _dt_value_format(_dt_datatree_detail_t* d, const _dt_value_t* p, _dt_string_t* buf);
-static void _dt_pair_format(_dt_datatree_detail_t* d, const _dt_pair_t* p, _dt_string_t* buf);
-static void _dt_array_format(_dt_datatree_detail_t* d, const _dt_array_t* p, _dt_string_t* buf);
-static void _dt_object_format(_dt_datatree_detail_t* d, const _dt_object_t* p, _dt_string_t* buf);
+static dt_status_t _dt_value_format(_dt_datatree_detail_t* d, const _dt_value_t* p, _dt_string_t* buf, dt_bool_t is_key);
+static dt_status_t _dt_pair_format(_dt_datatree_detail_t* d, const _dt_pair_t* p, _dt_string_t* buf);
+static dt_status_t _dt_array_format(_dt_datatree_detail_t* d, const _dt_array_t* p, _dt_string_t* buf);
+static dt_status_t _dt_object_format(_dt_datatree_detail_t* d, const _dt_object_t* p, _dt_string_t* buf);
 
 static void _dt_value_ser(_dt_datatree_detail_t* d, const _dt_value_t* p, unsigned char** buf, size_t* s);
 static void _dt_pair_ser(_dt_datatree_detail_t* d, const _dt_pair_t* p, unsigned char** buf, size_t* s);
@@ -815,64 +825,80 @@ void _dt_indentation_format(_dt_datatree_detail_t* d, _dt_string_t* buf) {
 		_dt_strcat(buf, "\t");
 }
 
-void _dt_value_format(_dt_datatree_detail_t* d, const _dt_value_t* p, _dt_string_t* buf) {
+dt_status_t _dt_value_format(_dt_datatree_detail_t* d, const _dt_value_t* p, _dt_string_t* buf, dt_bool_t is_key/* = DT_FALSE*/) {
 	char tmp[64];
 	DT_ASSERT(d && p && buf);
 	switch(p->type) {
 	case DT_NULL:
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		_dt_strcat(buf, "null");
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		break;
 	case DT_BOOL:
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		_dt_strcat(buf, p->data._bool ? "true" : "false");
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		break;
 	case DT_LONG:
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		sprintf(tmp, "%ld", p->data._long);
 		_dt_strcat(buf, tmp);
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		break;
 	case DT_DOUBLE:
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		sprintf(tmp, "%g", p->data._double);
 		_dt_strcat(buf, tmp);
+		_DT_FORMAT_JSON_QUOTE(is_key, buf);
 		break;
 	case DT_STRING: {
 			size_t i = 0;
-			int use = 0;
-			if(p->data._str->c_str[i] == '\0') use = 1;
-			while(p->data._str->c_str[i] != '\0') {
-				if(_dt_is_separator_char(p->data._str->c_str[i]) || _xpl_is_separator(p->data._str->c_str[i], NULL) || _dt_xpl_need_escape(p->data._str->c_str[i])) { use = 1; break; }
-				else if(i >= 64) { use = 1; break; }
-				i++;
+			int use = is_key || (d && (dt_datatree_t)d != DT_DUMMY_DATATREE && d->json_mode);
+			if(!use) {
+				if(p->data._str->c_str[i] == '\0') use = 1;
+				while(p->data._str->c_str[i] != '\0') {
+					if(_dt_is_separator_char(p->data._str->c_str[i]) || _xpl_is_separator(p->data._str->c_str[i], NULL) || _dt_xpl_need_escape(p->data._str->c_str[i])) { use = 1; break; }
+					else if(i >= 64) { use = 1; break; }
+					i++;
+				}
 			}
-			if(use) _dt_strcat(buf, "\"");
+			_DT_FORMAT_JSON_QUOTE(use, buf);
 			_dt_strecat(buf, p->data._str->c_str);
-			if(use) _dt_strcat(buf, "\"");
+			_DT_FORMAT_JSON_QUOTE(use, buf);
 		}
 		break;
 	case DT_OBJECT:
+		if(is_key) return DT_JSON_INCOMPATIBLE;
 		_dt_object_format(d, p->data._obj, buf);
 		break;
 	case DT_ARRAY:
+		if(is_key) return DT_JSON_INCOMPATIBLE;
 		_dt_array_format(d, &p->data._array, buf);
 		break;
 	default:
 		DT_ASSERT(0 && "Invalid type");
 	}
+
+	return DT_OK;
 }
 
-void _dt_pair_format(_dt_datatree_detail_t* d, const _dt_pair_t* p, _dt_string_t* buf) {
+dt_status_t _dt_pair_format(_dt_datatree_detail_t* d, const _dt_pair_t* p, _dt_string_t* buf) {
 	DT_ASSERT(d && p && buf);
 
 	_dt_indentation_format(d, buf);
-	_dt_value_format(d, p->key, buf);
+	_DT_CHECK(_dt_value_format(d, p->key, buf, DT_TRUE));
 
 	if((dt_datatree_t)d != DT_DUMMY_DATATREE)
 		_dt_strcat(buf, d->compact_mode ? ":" : " : ");
 	else
 		_dt_strcat(buf, ":");
 
-	_dt_value_format(d, &p->value->obj, buf);
+	_DT_CHECK(_dt_value_format(d, &p->value->obj, buf, DT_FALSE));
+
+	return DT_OK;
 }
 
-void _dt_array_format(_dt_datatree_detail_t* d, const _dt_array_t* p, _dt_string_t* buf) {
+dt_status_t _dt_array_format(_dt_datatree_detail_t* d, const _dt_array_t* p, _dt_string_t* buf) {
 	size_t i = 0;
 	DT_ASSERT(d && p && buf);
 
@@ -885,7 +911,7 @@ void _dt_array_format(_dt_datatree_detail_t* d, const _dt_array_t* p, _dt_string
 
 	for(i = 0; i < p->count; i++) {
 		_dt_indentation_format(d, buf);
-		_dt_value_format(d, &p->elems[i], buf);
+		_DT_CHECK(_dt_value_format(d, &p->elems[i], buf, DT_FALSE));
 		if(i != p->count - 1) {
 			if((dt_datatree_t)d != DT_DUMMY_DATATREE)
 				_dt_strcat(buf, d->compact_mode ? "," : ",\n");
@@ -901,9 +927,11 @@ void _dt_array_format(_dt_datatree_detail_t* d, const _dt_array_t* p, _dt_string
 		d->format_indentation--;
 	_dt_indentation_format(d, buf);
 	_dt_strcat(buf, "]");
+
+	return DT_OK;
 }
 
-void _dt_object_format(_dt_datatree_detail_t* d, const _dt_object_t* p, _dt_string_t* buf) {
+dt_status_t _dt_object_format(_dt_datatree_detail_t* d, const _dt_object_t* p, _dt_string_t* buf) {
 	size_t i = 0;
 	DT_ASSERT(d && p && buf);
 
@@ -915,7 +943,7 @@ void _dt_object_format(_dt_datatree_detail_t* d, const _dt_object_t* p, _dt_stri
 	}
 
 	for(i = 0; i < p->count; i++) {
-		_dt_pair_format(d, &p->members[i], buf);
+		_DT_CHECK(_dt_pair_format(d, &p->members[i], buf));
 		if(i != p->count - 1) {
 			if((dt_datatree_t)d != DT_DUMMY_DATATREE)
 				_dt_strcat(buf, d->compact_mode ? "," : ",\n");
@@ -931,6 +959,8 @@ void _dt_object_format(_dt_datatree_detail_t* d, const _dt_object_t* p, _dt_stri
 		d->format_indentation--;
 	_dt_indentation_format(d, buf);
 	_dt_strcat(buf, "}");
+
+	return DT_OK;
 }
 
 void _dt_value_ser(_dt_datatree_detail_t* d, const _dt_value_t* p, unsigned char** buf, size_t* s) {
@@ -1936,14 +1966,17 @@ dt_status_t dt_load_datatree_file(dt_datatree_t d, const char* f) {
 	return result;
 }
 
-void dt_save_datatree_file(dt_datatree_t d, const char* f, dt_bool_t compact) {
+dt_status_t dt_save_datatree_file(dt_datatree_t d, const char* f, dt_bool_t compact, dt_bool_t json_mode) {
+	dt_status_t result = DT_OK;
 	_dt_datatree_detail_t* dt = (_dt_datatree_detail_t*)d;
 	char* buf = NULL;
 	DT_ASSERT(d && f);
 	dt->compact_mode = compact;
-	dt_save_datatree_string(d, &buf, compact);
+	result = dt_save_datatree_string(d, &buf, compact, json_mode);
 	_dt_fwriteall(f, buf, strlen(buf) + 1);
 	dt_free((void**)&buf);
+
+	return result;
 }
 
 dt_status_t dt_load_datatree_string_sad(dt_datatree_t d, dt_sad_handler_t* h, const char* s) {
@@ -1983,11 +2016,12 @@ dt_status_t dt_load_datatree_string(dt_datatree_t d, const char* s) {
 	return result;
 }
 
-void dt_save_datatree_string(dt_datatree_t d, char** s, dt_bool_t compact) {
+dt_status_t dt_save_datatree_string(dt_datatree_t d, char** s, dt_bool_t compact, dt_bool_t json_mode) {
 	_dt_datatree_detail_t* dt = (_dt_datatree_detail_t*)d;
 	DT_ASSERT(d);
 	dt->compact_mode = compact;
-	dt_format_value(d, (const dt_value_t)&dt->root, s, compact);
+
+	return dt_format_value(d, (const dt_value_t)&dt->root, s, compact, json_mode);
 }
 
 dt_status_t dt_load_datatree_bin_sad(dt_datatree_t d, dt_sad_handler_t* h, const void* b) {
@@ -2151,7 +2185,8 @@ void dt_destroy_value(dt_datatree_t d, dt_value_t v) {
 	_DT_DEL(_dt_value_t, val);
 }
 
-void dt_format_value(dt_datatree_t d, const dt_value_t v, char** s, dt_bool_t compact) {
+dt_status_t dt_format_value(dt_datatree_t d, const dt_value_t v, char** s, dt_bool_t compact, dt_bool_t json_mode) {
+	dt_status_t result = DT_OK;
 	_dt_datatree_detail_t* dt = (_dt_datatree_detail_t*)d;
 	_dt_value_t* val = (_dt_value_t*)v;
 	_dt_string_t str;
@@ -2161,10 +2196,14 @@ void dt_format_value(dt_datatree_t d, const dt_value_t v, char** s, dt_bool_t co
 	str.c_str = *s;
 	str.length = 0;
 	str.size = _DT_ARRAY_GROW_STEP;
-	if(d != DT_DUMMY_DATATREE)
+	if(d != DT_DUMMY_DATATREE) {
 		dt->compact_mode = compact;
-	_dt_value_format(dt, val, &str);
+		dt->json_mode = json_mode;
+	}
+	result = _dt_value_format(dt, val, &str, DT_FALSE);
 	*s = str.c_str;
+
+	return result;
 }
 
 void dt_clone_value(dt_datatree_t d, const dt_value_t v, dt_value_t o) {

@@ -174,7 +174,8 @@ typedef enum dt_status_t {
 	DT_KEY_DOES_NOT_EXIST,            /**< Given key not exists in object members */
 	DT_INDEX_OUT_OF_RANGE,            /**< An index of an object or array is out of range */
 	DT_TYPE_NOT_MATCHED,              /**< Type not matched in a conversion */
-	DT_VALUE_IS_READONLY              /**< Value is readonly, means you can not change the key of an object member */
+	DT_VALUE_IS_READONLY,             /**< Value is readonly, means you can not change the key of an object member */
+	DT_JSON_INCOMPATIBLE              /**< The datatree is JSON incompatible */
 } dt_status_t;
 
 /**
@@ -426,11 +427,13 @@ DT_API dt_status_t dt_load_datatree_file(dt_datatree_t d, const char* f);
 /**
  * @brief Saves a datatree to a text file
  *
- * @param[in] d       - Source datatree
- * @param[in] f       - Target file path
- * @param[in] compact - Save as compact without spaces and newlines
+ * @param[in] d         - Source datatree
+ * @param[in] f         - Target file path
+ * @param[in] compact   - Save as compact without spaces and newlines
+ * @param[in] json_mode - JSON mode
+ * @retur - Formatting status
  */
-DT_API void dt_save_datatree_file(dt_datatree_t d, const char* f, dt_bool_t compact);
+DT_API dt_status_t dt_save_datatree_file(dt_datatree_t d, const char* f, dt_bool_t compact, dt_bool_t json_mode);
 /**
  * @brief Loads a string to a datatree in SAD mode
  *
@@ -451,11 +454,13 @@ DT_API dt_status_t dt_load_datatree_string(dt_datatree_t d, const char* s);
 /**
  * @brief Saves a datatree to a string
  *
- * @param[in] d       - Source datatree
- * @param[out] s      - Target string
- * @param[in] compact - Save as compact without space and newlines
+ * @param[in] d         - Source datatree
+ * @param[out] s        - Target string
+ * @param[in] compact   - Save as compact without space and newlines
+ * @param[in] json_mode - JSON mode
+ * @retur - Formatting status
  */
-DT_API void dt_save_datatree_string(dt_datatree_t d, char** s, dt_bool_t compact);
+DT_API dt_status_t dt_save_datatree_string(dt_datatree_t d, char** s, dt_bool_t compact, dt_bool_t json_mode);
 /**
  * @brief Loades a binary buffer to a datatree in SAD mode
  *
@@ -515,12 +520,14 @@ DT_API void dt_destroy_value(dt_datatree_t d, dt_value_t v);
 /**
  * @brief Formats a value to string
  *
- * @param[in] d       - Host datatree
- * @param[in] v       - Value to be formatted
- * @param[out] s      - Target string
- * @param[in] compact - Compact mode
+ * @param[in] d         - Host datatree
+ * @param[in] v         - Value to be formatted
+ * @param[out] s        - Target string
+ * @param[in] compact   - Compact mode
+ * @param[in] json_mode - JSON mode
+ * @return - Formatting status
  */
-DT_API void dt_format_value(dt_datatree_t d, const dt_value_t v, char** s, dt_bool_t compact);
+DT_API dt_status_t dt_format_value(dt_datatree_t d, const dt_value_t v, char** s, dt_bool_t compact, dt_bool_t json_mode);
 /**
  * @brief Clones a value to another
  *

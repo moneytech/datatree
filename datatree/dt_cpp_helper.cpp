@@ -159,17 +159,17 @@ Value::operator dt_value_t(void) {
 	return mRep;
 }
 
-std::string Value::toString(dt_bool_t compact/* = DT_FALSE*/) const {
+std::string Value::toString(dt_bool_t compact/* = DT_FALSE*/, dt_bool_t json_mode/* = DT_FALSE*/) const {
 	std::string ret;
-	toString(ret, compact);
+	toString(ret, compact, json_mode);
 
 	return ret;
 }
 
-void Value::toString(std::string &buf, dt_bool_t compact/* = DT_FALSE*/) const {
+void Value::toString(std::string &buf, dt_bool_t compact/* = DT_FALSE*/, dt_bool_t json_mode/* = DT_FALSE*/) const {
 	if(!mRep) return;
 	char* p = NULL;
-	dt_format_value(mDatatree, mRep, &p, (compact ? DT_TRUE : DT_FALSE));
+	dt_format_value(mDatatree, mRep, &p, (compact ? DT_TRUE : DT_FALSE), json_mode);
 	buf = p;
 	dt_free((void**)&p);
 }
